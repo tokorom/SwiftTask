@@ -445,6 +445,25 @@ public class Task<Progress, Value, Error>: Printable
             
         }.name("\(self.name)-success")
     }
+    public func success<Progress2, Value2, Value3>(successClosure: Value -> Task<Progress2, (Value2, Value3), Error>) -> Task<Progress2, (Value2, Value3), Error>
+    {
+        return Task<Progress2, (Value2, Value3), Error> { [unowned self] newMachine, progress, fulfill, _reject, configure in
+            
+            let selfMachine = self._machine
+            
+            // NOTE: using `self._then()` + `selfMachine` instead of `self.then()` will reduce Task allocation
+            self._then {
+                if let value = selfMachine.value {
+                    let innerTask = successClosure(value)
+                    _bindInnerTask(innerTask, newMachine, progress, fulfill, _reject, configure)
+                }
+                else if let errorInfo = selfMachine.errorInfo {
+                    _reject(errorInfo)
+                }
+            }
+            
+        }.name("\(self.name)-success")
+    }
     
     ///
     /// failure (rejected) + closure returning value
